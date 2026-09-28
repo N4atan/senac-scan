@@ -1,12 +1,12 @@
 "use client"
 
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { Barcode } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 
 
-export default function BarcodeScan({setResult}: {setResult: (result: string) => void}) {
+export default function BarcodeScan({ setResult }: { setResult: (result: string) => void }) {
     const [isScanning, setIsScanning] = useState<boolean>(false);
 
 
@@ -14,7 +14,18 @@ export default function BarcodeScan({setResult}: {setResult: (result: string) =>
 
     useEffect(() => {
         // 1. Instancia o leitor apontando para o ID da div ("reader")
-        const html5QrCode = new Html5Qrcode("reader");
+        const html5QrCode = new Html5Qrcode("reader", {
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.QR_CODE
+            ],
+            verbose: false,
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            }
+        });
         scannerRef.current = html5QrCode;
 
         // 2. Cleanup: Função que roda quando o componente é destruído (usuário sai da tela)
@@ -35,20 +46,16 @@ export default function BarcodeScan({setResult}: {setResult: (result: string) =>
             await scannerRef.current?.start(
                 { facingMode: "environment" },
                 {
-                    fps: 20,
+                    fps: 10, // 10 FPS dá folga de CPU para decodificar 1D com precisão
                     qrbox: (viewfinderWidth, viewfinderHeight) => ({
-                        width: Math.min(Math.floor(viewfinderWidth * 0.9), 350),
-                        height: Math.min(Math.floor(viewfinderHeight * 0.6), 250),
-                    }),
+                        // Barras precisam de bastante largura horizontal na mira
+                        width: Math.min(Math.floor(viewfinderWidth * 0.95), 400),
+                        height: Math.min(Math.floor(viewfinderHeight * 0.35), 160),
+                    })
                 },
                 (decodedText) => {
-                    // Callback de SUCESSO
                     setResult(decodedText);
-
-                    // Opcional: Faz o celular vibrar ao ler
                     if (navigator.vibrate) navigator.vibrate(200);
-
-                    // Desliga a câmera automaticamente após ler com sucesso
                     stopScanning();
                 },
                 (errorMessage) => {
@@ -76,8 +83,8 @@ export default function BarcodeScan({setResult}: {setResult: (result: string) =>
     return (
         <div className="flex flex-col items-center gap-4 w-full max-w-md mx-auto">
             {/* Container obrigatório onde o vídeo será injetado */}
-            <div 
-                id="reader" 
+            <div
+                id="reader"
                 className="w-full max-w-md rounded-2xl overflow-hidden shadow-md border border-base-300 bg-black/5"
             ></div>
 
