@@ -1,7 +1,8 @@
 "use client";
 
 import { BemComLocal, getAllBens, getAllSalas, patchLocaldoBem } from "@/actions/bensActions";
-import { sala } from "@/app/generated/prisma/client";
+import { getLogsTransferenciaPendente, LogTransferenciaPendente } from "@/actions/logTransferenciasAction";
+import { log_transferencia, sala } from "@/app/generated/prisma/client";
 import { createContext, useContext, useState, useEffect } from "react";
 import { Toaster, toast } from "react-hot-toast";
 
@@ -17,13 +18,18 @@ interface DataProviderContext {
     bens: BemComLocal[];
     setBens: (bens: BemComLocal[]) => void;
 
+    logsTransferencias: LogTransferenciaPendente[];
+    setLogsTransferencias: (logsTransferenciaPendente: LogTransferenciaPendente[]) => void;
+
     refreshBens: () => Promise<void>;
     refreshSalas: () => Promise<void>;
+    refreshLogsTransferencias: () => Promise<void>;
 
     updateLocalBem: (codigo_patrimonial: string, local_id: string | number) => Promise<boolean>;
 
     isLoadingBens: boolean;
     isLoadingSalas: boolean;
+    isLoadingLogsTransferencias: boolean;
 }
 
 const Context = createContext<DataProviderContext | null>(null);
@@ -31,12 +37,16 @@ const Context = createContext<DataProviderContext | null>(null);
 export function DataProvider({ children }: DataProviderProps) {
     const [salas         , setSalas     ] = useState<sala[]>([]);
     const [bens          , setBens      ] = useState<BemComLocal[]>([]);
+    const [logsTransferencias, setLogsTransferencias] = useState<LogTransferenciaPendente[]>([]);
+
     const [isLoadingBens , setIsLoadingBens ] = useState<boolean>(false);
     const [isLoadingSalas, setIsLoadingSalas] = useState<boolean>(false);
+    const [isLoadingLogsTransferencias, setIsLoadingLogsTransferencias] = useState<boolean>(false);
 
     useEffect(() => {
         refreshBens();
         refreshSalas();
+        refreshLogsTransferencias();
     }, []);
 
     const refreshBens = async () => {
@@ -54,6 +64,15 @@ export function DataProvider({ children }: DataProviderProps) {
             setSalas(res.data);
         }).finally(() => {
             setIsLoadingSalas(false);
+        });
+    };
+
+    const refreshLogsTransferencias = async () => {
+        setIsLoadingLogsTransferencias(true);
+        await getLogsTransferenciaPendente().then((res) => {
+            setLogsTransferencias(res.data);
+        }).finally(() => {
+            setIsLoadingLogsTransferencias(false);
         });
     };
 
@@ -79,7 +98,7 @@ export function DataProvider({ children }: DataProviderProps) {
     };
 
     return (
-        <Context.Provider value={{ salas, setSalas, bens, setBens, refreshBens, refreshSalas, updateLocalBem, isLoadingBens, isLoadingSalas }}>
+        <Context.Provider value={{ salas, setSalas, bens, setBens, logsTransferencias, setLogsTransferencias, refreshBens, refreshSalas, refreshLogsTransferencias, updateLocalBem, isLoadingBens, isLoadingSalas, isLoadingLogsTransferencias }}>
             <Toaster position="top-right" />
             {children}
         </Context.Provider>

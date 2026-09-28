@@ -1,6 +1,6 @@
 
 import { LogTransferenciaPendente } from "@/actions/logTransferenciasAction";
-import { ArrowRight, Clock, Tag } from "lucide-react";
+import { ArrowDown, ArrowRight, Clock, Tag } from "lucide-react";
 
 export type CardProps = {
     transf: LogTransferenciaPendente
@@ -19,16 +19,28 @@ export default function CardBemTransfPendente({ transf }: CardProps) {
                         #{transf.bem.codigo_patrimonial}
                     </span>
 
-                    <span className="badge badge-warning">
-                        <Clock size={12} />
-                        {transf.data_transferencia.toDateString()}
-                    </span>
+                    <div className="tooltip tooltip-warning tooltip-top" data-tip="Data da Transferência">
+                        <span className="badge badge-warning">
+                            <Clock size={12} />
+                            {transf.data_transferencia.toLocaleDateString('pt-BR')}
+                        </span>
+                    </div>
                 </div>
 
-                <div className="bg-base-200 flex flex-row justify-between items-center gap-4 p-2 rounded-box">
-                    <span className="truncate max-w-[40%] text-sm">{transf.Local_origem?.descricao}</span>
-                    <ArrowRight size={18} className="text-success" />
-                    <span className="truncate max-w-[40%] text-sm font-bold">{transf.Local_destino?.descricao}</span>
+
+
+                <div className="bg-base-200 flex flex-col justify-between items-center gap-4 p-4 rounded-box">
+                    <div className="text-center">
+                        <span className="text-xs text-base-content/60 block">Local Atual</span>
+                        <span className="truncate text-sm font-semibold">{transf.Local_origem?.descricao || "Sem local definido"}</span>
+                    </div>
+
+                    <ArrowDown size={18} className="text-success" />
+
+                    <div className="text-center">
+                        <span className="text-xs text-base-content/60 block">Novo Local</span>
+                        <span className="truncate text-sm font-semibold">{transf.Local_destino?.descricao || "Sem local definido"}</span>
+                    </div>
                 </div>
 
                 <button className="btn btn-success btn-outline">SISPRO | Finalizar</button>

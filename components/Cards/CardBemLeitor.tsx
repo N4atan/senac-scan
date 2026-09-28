@@ -18,36 +18,41 @@ export default function CardBemLeitor({ bem, salas }: CardProps) {
     const { updateLocalBem } = useDataProvider();
 
     const handleSave = async () => {
-        if (!novoLocal.trim()) {
-            toast.error("Por favor, selecione ou digite o novo local.");
-            return;
-        }
+        try {
+            if (!novoLocal.trim()) {
+                toast.error("Por favor, selecione ou digite o novo local.");
+                return;
+            }
 
-        const salaEncontrada = salas.find(
-            (s) => s.descricao.toLowerCase() === novoLocal.trim().toLowerCase() || String(s.id) === novoLocal.trim()
-        );
+            const salaEncontrada = salas.find(
+                (s) => s.descricao.toLowerCase() === novoLocal.trim().toLowerCase() || String(s.id) === novoLocal.trim()
+            );
 
-        if (!salaEncontrada) {
-            toast.error("Local não reconhecido. Escolha uma sala válida da lista.");
-            return;
-        }
+            if (!salaEncontrada) {
+                toast.error("Local não reconhecido. Escolha uma sala válida da lista.");
+                return;
+            }
 
-        if (salaEncontrada.id === bem.id_local) {
-            toast.error("O bem já está cadastrado nesta localização!");
-            return;
-        }
+            if (salaEncontrada.id === bem.id_local) {
+                toast.error("O bem já está cadastrado nesta localização!");
+                return;
+            }
 
-        if (!bem.codigo_patrimonial) {
-            toast.error("Bem sem código patrimonial válido.");
-            return;
-        }
+            if (!bem.codigo_patrimonial) {
+                toast.error("Bem sem código patrimonial válido.");
+                return;
+            }
 
-        setIsSaving(true);
-        const sucesso = await updateLocalBem(bem.codigo_patrimonial, salaEncontrada.id);
-        setIsSaving(false);
+            setIsSaving(true);
+            const sucesso = await updateLocalBem(bem.codigo_patrimonial, salaEncontrada.id);
+            setIsSaving(false);
 
-        if (sucesso) {
-            setNovoLocal('');
+            if (sucesso) {
+                setNovoLocal('');
+            }
+        } catch (error: any) {
+            toast.error(error.message)
+            setIsSaving(false);
         }
     };
 
@@ -94,11 +99,11 @@ export default function CardBemLeitor({ bem, salas }: CardProps) {
                     </div>
                 </div>
 
-                <button 
-                    className="btn btn-success" 
+                <button
+                    className="btn btn-success"
                     onClick={handleSave}
                     disabled={isSaving || !novoLocal.trim()}
-                > 
+                >
                     {isSaving ? (
                         <>
                             <span className="loading loading-spinner loading-xs"></span>

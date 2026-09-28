@@ -3,7 +3,7 @@ import { Box, List, QrCode, ScanBarcode, ScanQrCode, Search } from "lucide-react
 
 export function Navbar() {
     return (
-        <div className="navbar bg-base-100 shadow-sm">
+        <div className="hidden lg:flex lg:sticky lg:top-0 lg:z-50 navbar bg-base-100 shadow-sm">
             <div className="navbar-start">
                 <a className="btn btn-primary text-xl">
                     <Box size={24}/>

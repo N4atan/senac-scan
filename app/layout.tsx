@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Maven_Pro } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/ui/Navbar";
 import { DataProvider } from "@/Providers/DataProvider";
+import { Dock } from "@/components/ui/Dock";
 
 
 
@@ -26,6 +27,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Navbar />
 
           {children}
+
+          <Dock />
         </DataProvider>
       </body>
     </html>

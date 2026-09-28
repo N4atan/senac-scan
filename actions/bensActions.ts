@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import type { bem_patrimonial, sala } from "@/app/generated/prisma/client";
 import { revalidatePath } from "next/cache";
+import { postLogTransferencia } from "./logTransferenciasAction";
 
 export type BemComLocal = bem_patrimonial & {
   Local: sala | null;
@@ -97,6 +98,18 @@ export async function getAllSalas(): Promise<ApiResponse<sala[]>> {
 
 export async function patchLocaldoBem(codigo_patrimonial: string, local_id: string): Promise<ApiResponse<BemComLocal | null>> {
   try {
+
+    const log = await postLogTransferencia(codigo_patrimonial, local_id);
+
+    if (!log) {
+      return {
+        data: null,
+        status: 500,
+        message: "Erro ao criar log",
+      };
+    }
+
+
     const bem = await prisma.bem_patrimonial.update({
       where: {
         codigo_patrimonial: codigo_patrimonial,
@@ -109,7 +122,12 @@ export async function patchLocaldoBem(codigo_patrimonial: string, local_id: stri
       },
     });
 
+
+
     revalidatePath("/leitor");
+    revalidatePath("/pendencias");
+    revalidatePath("/");
+
     return {
       data: bem,
       status: 200,
