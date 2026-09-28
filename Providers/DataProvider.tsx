@@ -1,10 +1,12 @@
 "use client";
 
 import { BemComLocal, getAllBens, getAllSalas, patchLocaldoBem } from "@/actions/bensActions";
-import { getLogsTransferenciaPendente, LogTransferenciaPendente } from "@/actions/logTransferenciasAction";
-import { log_transferencia, sala } from "@/app/generated/prisma/client";
+import { getLogsTransferenciaPendente, LogTransferenciaPendente, patchStatusTransf } from "@/actions/logTransferenciasAction";
+import { EnumStatusTransferencia, log_transferencia, sala } from "@/app/generated/prisma/client";
+import { supabase } from "@/lib/supabase";
 import { createContext, useContext, useState, useEffect } from "react";
 import { Toaster, toast } from "react-hot-toast";
+
 
 
 type DataProviderProps = {
@@ -27,6 +29,8 @@ interface DataProviderContext {
 
     updateLocalBem: (codigo_patrimonial: string, local_id: string | number) => Promise<boolean>;
 
+    updateStatusTransf: (id: string, new_status: EnumStatusTransferencia) => Promise<boolean>;
+
     isLoadingBens: boolean;
     isLoadingSalas: boolean;
     isLoadingLogsTransferencias: boolean;
@@ -35,11 +39,11 @@ interface DataProviderContext {
 const Context = createContext<DataProviderContext | null>(null);
 
 export function DataProvider({ children }: DataProviderProps) {
-    const [salas         , setSalas     ] = useState<sala[]>([]);
-    const [bens          , setBens      ] = useState<BemComLocal[]>([]);
+    const [salas, setSalas] = useState<sala[]>([]);
+    const [bens, setBens] = useState<BemComLocal[]>([]);
     const [logsTransferencias, setLogsTransferencias] = useState<LogTransferenciaPendente[]>([]);
 
-    const [isLoadingBens , setIsLoadingBens ] = useState<boolean>(false);
+    const [isLoadingBens, setIsLoadingBens] = useState<boolean>(false);
     const [isLoadingSalas, setIsLoadingSalas] = useState<boolean>(false);
     const [isLoadingLogsTransferencias, setIsLoadingLogsTransferencias] = useState<boolean>(false);
 
@@ -47,6 +51,25 @@ export function DataProvider({ children }: DataProviderProps) {
         refreshBens();
         refreshSalas();
         refreshLogsTransferencias();
+
+        const subscription = supabase
+            .channel('schema-changes')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public' },
+                (payload) => {
+                    console.log("Alterações no banco detectadas.", payload)
+
+                    refreshBens();
+                    refreshSalas();
+                    refreshLogsTransferencias();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            subscription.unsubscribe();
+        };
     }, []);
 
     const refreshBens = async () => {
@@ -81,9 +104,6 @@ export function DataProvider({ children }: DataProviderProps) {
         try {
             const resp = await patchLocaldoBem(codigo_patrimonial, String(local_id));
             if (resp.status === 200 && resp.data) {
-                setBens((prev) =>
-                    prev.map((b) => (b.codigo_patrimonial === codigo_patrimonial ? resp.data! : b))
-                );
                 toast.success(resp.message || "Localização atualizada com sucesso!", { id: toastId });
                 return true;
             } else {
@@ -97,8 +117,26 @@ export function DataProvider({ children }: DataProviderProps) {
         }
     };
 
+    const updateStatusTransf = async (id: string, new_status: EnumStatusTransferencia): Promise<boolean> => {
+        const toastId = toast.loading("Atualizando status...");
+        try {
+            const resp = await patchStatusTransf(id, new_status);
+            if (resp.status === 200 && resp.data) {
+                toast.success(resp.message || "Status atualizado com sucesso!", { id: toastId });
+                return true;
+            } else {
+                toast.error(resp.message || "Erro ao atualizar status.", { id: toastId });
+                return false;
+            }
+        } catch (error) {
+            console.error("Erro ao atualizar status:", error);
+            toast.error("Erro inesperado ao atualizar status.", { id: toastId });
+            return false;
+        }
+    }
+
     return (
-        <Context.Provider value={{ salas, setSalas, bens, setBens, logsTransferencias, setLogsTransferencias, refreshBens, refreshSalas, refreshLogsTransferencias, updateLocalBem, isLoadingBens, isLoadingSalas, isLoadingLogsTransferencias }}>
+        <Context.Provider value={{ salas, setSalas, bens, setBens, logsTransferencias, setLogsTransferencias, refreshBens, refreshSalas, refreshLogsTransferencias, updateLocalBem, updateStatusTransf, isLoadingBens, isLoadingSalas, isLoadingLogsTransferencias }}>
             <Toaster position="top-right" />
             {children}
         </Context.Provider>

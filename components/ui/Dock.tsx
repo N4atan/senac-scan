@@ -13,7 +13,7 @@ export function Dock() {
     
 
     return (
-        <div className="dock">
+        <div className="lg:hidden dock">
             <Link className={pathname === "/" ? "dock-active" : ""} href="/">
                 <Search size={14} />
                 <span className="dock-label">Busca</span>

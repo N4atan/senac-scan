@@ -89,3 +89,31 @@ export async function postLogTransferencia(codigo_patrimonial: string, local_des
     }
 }
 
+export async function patchStatusTransf(id: string, new_status: EnumStatusTransferencia): Promise<ApiResponse<log_transferencia | null>> {
+    try {
+        const log = await prisma.log_transferencia.update({
+            where: {
+                id: parseInt(id)
+            },
+            data: {
+                status_movimentacao: new_status
+            }
+        });
+
+        revalidatePath("/pendencias");
+
+        return {
+            data: log,
+            status: 200,
+            message: "Transferência atualizada com sucesso",
+        };
+    } catch (error) {
+        console.error("Erro ao atualizar transferência:", error);
+        return {
+            data: null,
+            status: 500,
+            message: "Erro ao atualizar transferência",
+        };
+    }
+}
+
