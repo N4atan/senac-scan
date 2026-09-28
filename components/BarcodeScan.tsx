@@ -24,7 +24,8 @@ export default function BarcodeScan({ setResult }: { setResult: (result: string)
             verbose: false,
             experimentalFeatures: {
                 useBarCodeDetectorIfSupported: true
-            }
+            },
+            
         });
         scannerRef.current = html5QrCode;
 
@@ -47,11 +48,12 @@ export default function BarcodeScan({ setResult }: { setResult: (result: string)
                 { facingMode: "environment" },
                 {
                     fps: 10, // 10 FPS dá folga de CPU para decodificar 1D com precisão
-                    qrbox: (viewfinderWidth, viewfinderHeight) => ({
+                    /* qrbox: (viewfinderWidth, viewfinderHeight) => ({
                         // Barras precisam de bastante largura horizontal na mira
                         width: Math.min(Math.floor(viewfinderWidth * 0.95), 400),
                         height: Math.min(Math.floor(viewfinderHeight * 0.35), 160),
-                    })
+                    }) */
+                    
                 },
                 (decodedText) => {
                     setResult(decodedText);
