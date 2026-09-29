@@ -2,7 +2,8 @@
 
 import { BemComLocal, getAllBens, getAllSalas, patchLocaldoBem } from "@/actions/bensActions";
 import { getLogsTransferenciaPendente, LogTransferenciaPendente, patchStatusTransf } from "@/actions/logTransferenciasAction";
-import { EnumStatusTransferencia, log_transferencia, sala } from "@/app/generated/prisma/client";
+import { getAllUsers, UserSemSenha } from "@/actions/usuariosAction";
+import { EnumStatusTransferencia, log_transferencia, sala, User } from "@/app/generated/prisma/client";
 import { supabase } from "@/lib/supabase";
 import { createContext, useContext, useState, useEffect } from "react";
 import { Toaster, toast } from "react-hot-toast";
@@ -23,9 +24,13 @@ interface DataProviderContext {
     logsTransferencias: LogTransferenciaPendente[];
     setLogsTransferencias: (logsTransferenciaPendente: LogTransferenciaPendente[]) => void;
 
+    users: UserSemSenha[];
+    setUsers: (users: UserSemSenha[]) => void;
+
     refreshBens: () => Promise<void>;
     refreshSalas: () => Promise<void>;
     refreshLogsTransferencias: () => Promise<void>;
+    refreshUsers: () => Promise<void>;
 
     updateLocalBem: (codigo_patrimonial: string, local_id: string | number) => Promise<boolean>;
 
@@ -34,6 +39,7 @@ interface DataProviderContext {
     isLoadingBens: boolean;
     isLoadingSalas: boolean;
     isLoadingLogsTransferencias: boolean;
+    isLoadingUsers: boolean;
 }
 
 const Context = createContext<DataProviderContext | null>(null);
@@ -42,15 +48,18 @@ export function DataProvider({ children }: DataProviderProps) {
     const [salas, setSalas] = useState<sala[]>([]);
     const [bens, setBens] = useState<BemComLocal[]>([]);
     const [logsTransferencias, setLogsTransferencias] = useState<LogTransferenciaPendente[]>([]);
+    const [users, setUsers] = useState<UserSemSenha[]>([]);
 
     const [isLoadingBens, setIsLoadingBens] = useState<boolean>(false);
     const [isLoadingSalas, setIsLoadingSalas] = useState<boolean>(false);
     const [isLoadingLogsTransferencias, setIsLoadingLogsTransferencias] = useState<boolean>(false);
+    const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false);
 
     useEffect(() => {
         refreshBens();
         refreshSalas();
         refreshLogsTransferencias();
+        refreshUsers();
 
         const subscription = supabase
             .channel('schema-changes')
@@ -135,8 +144,17 @@ export function DataProvider({ children }: DataProviderProps) {
         }
     }
 
+    const refreshUsers = async () => {
+        setIsLoadingUsers(true);
+        await getAllUsers().then((res) => {
+            setUsers(res.data || []);
+        }).finally(() => {
+            setIsLoadingUsers(false);
+        });
+    };
+
     return (
-        <Context.Provider value={{ salas, setSalas, bens, setBens, logsTransferencias, setLogsTransferencias, refreshBens, refreshSalas, refreshLogsTransferencias, updateLocalBem, updateStatusTransf, isLoadingBens, isLoadingSalas, isLoadingLogsTransferencias }}>
+        <Context.Provider value={{ salas, setSalas, bens, setBens, logsTransferencias, setLogsTransferencias, users, setUsers, refreshBens, refreshSalas, refreshLogsTransferencias, refreshUsers, updateLocalBem, updateStatusTransf, isLoadingBens, isLoadingSalas, isLoadingLogsTransferencias, isLoadingUsers }}>
             <Toaster position="top-right" />
             {children}
         </Context.Provider>

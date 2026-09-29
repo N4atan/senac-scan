@@ -1,8 +1,9 @@
 "use client";
 import { CloudDownload, Filter, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { EnumCategoriaBem } from "./generated/prisma/browser";
+import { EnumCategoriaBem } from "@/app/generated/prisma/enums";
 import { useDataProvider } from "@/Providers/DataProvider";
+import { Table } from "@/components/Tables/Table";
 
 export default function Home() {
   const [showCategory, setShowCategory] = useState(false);
@@ -144,47 +145,29 @@ export default function Home() {
 
           </div>
 
+          {!isLoadingBens && (
+            <span>Exibindo <span className="text-primary font-bold">{bensFiltrados.length}</span> bens</span>
+          )}
 
           <div className="overflow-x-auto rounded-box border border-base-300 bg-base-100 my-4">
             {isLoadingBens ? (
               <div className="flex justify-center items-center py-10 bg-base-200">
                 <span className="loading loading-spinner loading-lg"></span>
               </div>
-            ) : bensFiltrados.length === 0 ? (
-              <div className="flex justify-center items-center py-10 bg-base-200">
-                <span className="text-soft">Nenhum bem encontrado.</span>
-              </div>
-            ) : (
-              <table className="table">
-                {/* head */}
-                <thead>
-                  <tr className="bg-base-200/40">
-                    <th></th>
-                    <th></th>
-                    <th>Descrição</th>
-                    <th>Localização</th>
-                    <th>Categoria</th>
-                    <th>Status</th>
+            ) : <Table headers={['', '', 'Descrição', 'Localização', 'Categoria', 'Status']} data={[
+              ...bensFiltrados.map((bem) => [
+                bem.codigo_patrimonial,
+                bem.identificacao_interna,
+                bem.descricao_bem,
+                bem.Local?.descricao,
+                bem.categoria,
+                bem.status,
 
-                  </tr>
-                </thead>
-                <tbody>
+              ])
+            ]} />
+            }
 
 
-                  {bensFiltrados.map((bem) => (
-                    <tr key={bem.id} className="hover:bg-base-300">
-                      <th>{bem.codigo_patrimonial}</th>
-                      <td>{bem.identificacao_interna}</td>
-                      <td>{bem.descricao_bem}</td>
-                      <td>{bem.Local?.descricao}</td>
-                      <td>{bem.categoria}</td>
-                      <td>{bem.status}</td>
-                    </tr>
-                  ))}
-
-                </tbody>
-              </table>
-            )}
           </div>
         </div>
       </div>
