@@ -25,14 +25,14 @@ export const authOptions: NextAuthOptions = {
           throw new Error("E-mail não cadastrado no sistema!");
         }
 
-        /*
+        
         // 2. Se as senhas forem hasheadas com bcrypt:
         const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
 
         if (!isPasswordValid) {
           throw new Error("Senha incorreta");
         }
-        */
+        
 
         // 3. Retorna o objeto do usuário (injetado no token JWT)
         return {
