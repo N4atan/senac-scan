@@ -58,9 +58,10 @@ model bem_patrimonial {
 }
 
 model sala {
-  id        Int         @id @default(autoincrement())
-  descricao String
-  escola    EnumEscolas
+  id            Int         @id @default(autoincrement())
+  codigo_sispro String?     @unique
+  descricao     String
+  escola        EnumEscolas
 
   bens                   bem_patrimonial[]   @relation("bem_patrimonial")
   transferencias_destino log_transferencia[] @relation("log_transferencia_destino")

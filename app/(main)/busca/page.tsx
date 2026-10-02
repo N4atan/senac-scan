@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { EnumCategoriaBem } from "@/app/generated/prisma/enums";
 import { useDataProvider } from "@/Providers/DataProvider";
 import { Table } from "@/components/Tables/Table";
+import { mainImport } from "@/actions/importBensAction";
 
 export default function Home() {
   const [showCategory, setShowCategory] = useState(false);
@@ -97,7 +98,7 @@ export default function Home() {
 
 
             <div className="flex flex-row gap-2 justify-between md:justify-start md:ml-auto ">
-              <button className="btn btn-ghost ">
+              <button className="btn btn-ghost " onClick={() => mainImport()}>
                 <CloudDownload size={14} />
                 Exportar
               </button>

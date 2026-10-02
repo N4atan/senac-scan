@@ -10,7 +10,7 @@ import { BtnLogout } from "../Buttons/BtnLogout";
 
 export async function Navbar() {
     const session = await getServerSession(authOptions);
-    console.log(session);
+    
 
     return (
         <div className="hidden lg:flex lg:sticky lg:top-0 lg:z-50 navbar bg-base-100 shadow-sm">

@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import type { bem_patrimonial, sala } from "@/app/generated/prisma/client";
+import type { bem_patrimonial, Prisma, sala } from "@/app/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { postLogTransferencia } from "./logTransferenciasAction";
 
@@ -94,6 +94,38 @@ export async function getAllSalas(): Promise<ApiResponse<sala[]>> {
     };
   }
 }
+
+export async function getSalaByWhere(where: Prisma.salaWhereUniqueInput): Promise<ApiResponse<sala | null>> {
+  try {
+    const sala = await prisma.sala.findUnique({
+      where,
+    });
+
+    if (!sala) {
+      return {
+        data: null,
+        status: 404,
+        message: "Sala não encontrada",
+      };
+    }
+    return {
+      data: sala,
+      status: 200,
+      message: "Sala carregada com sucesso",
+    };
+  } catch (error) {
+    console.error("Erro ao carregar salas:", error);
+    return {
+      data: null,
+      status: 500,
+      message: "Erro ao carregar salas",
+    };
+  }
+}
+
+
+
+
 
 
 export async function patchLocaldoBem(codigo_patrimonial: string, local_id: string): Promise<ApiResponse<BemComLocal | null>> {
