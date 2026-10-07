@@ -185,46 +185,46 @@ export async function patchLocaldosBens(logs: BensParaAtualizar[]): Promise<ApiR
         message: "Nenhum bem para atualizar",
       };
     }
-
-    const updates = logs.map((log) => {
-      return prisma.bem_patrimonial.update({
-        where: { id: log.bem.id },
-        data: { id_local: log.new_local.id }
-      })
+    // 1. Cria TODOS os logs com UMA ÚNICA query INSERT no banco
+    const logsData = logs.map((item) => ({
+      id_bem: item.bem.id,
+      id_local_origem: item.bem.id_local,
+      id_local_destino: item.new_local.id,
+      status_movimentacao: EnumStatusTransferencia.AGUARDANDO_SISPRO,
+    }));
+    await prisma.log_transferencia.createMany({
+      data: logsData,
     });
-
-    const createsLogs = logs.map((item) =>
-      prisma.log_transferencia.create({
-        data: {
-          id_bem: item.bem.id,
-          id_local_origem: item.bem.id_local,
-          id_local_destino: item.new_local.id,
-          status_movimentacao: EnumStatusTransferencia.AGUARDANDO_SISPRO,
-        },
-      })
-    );
-
-    await prisma.$transaction([...updates, ...createsLogs], {
-      maxWait: 5000, // tempo máximo aguardando uma conexão livre no pool
-      timeout: 40000, // tempo limite total para executar todos os updates
-    });
-
-
+    // 2. Executa os updates dos bens em pedaços (chunks de 50)
+    // Assim cada transação leva menos de 1 segundo!
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < logs.length; i += CHUNK_SIZE) {
+      const chunk = logs.slice(i, i + CHUNK_SIZE);
+      const chunkUpdates = chunk.map((item) =>
+        prisma.bem_patrimonial.update({
+          where: { id: item.bem.id },
+          data: { id_local: item.new_local.id },
+        })
+      );
+      await prisma.$transaction(chunkUpdates, {
+        maxWait: 5000,
+        timeout: 10000,
+      });
+    }
     revalidatePath("/sincronizar");
     revalidatePath("/pendencias");
     revalidatePath("/");
-
     return {
       data: true,
       status: 200,
-      message: "Bens atualizados com sucesso",
+      message: "Bens e transferências atualizados com sucesso",
     };
   } catch (error) {
-    console.error("Erro ao atualizar bens:", error);
+    console.error("Erro ao atualizar bens e criar logs:", error);
     return {
       data: null,
       status: 500,
-      message: "Erro ao atualizar bem",
+      message: "Erro ao atualizar bens",
     };
   }
 }
