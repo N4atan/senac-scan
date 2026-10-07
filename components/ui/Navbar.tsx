@@ -1,6 +1,6 @@
 
 
-import { Box, List, QrCode, ScanBarcode, ScanQrCode, Search, Users } from "lucide-react";
+import { Box, CardSim, List, QrCode, ScanBarcode, ScanQrCode, Search, Users } from "lucide-react";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -37,6 +37,10 @@ export async function Navbar() {
                     <li><Link href="/usuarios">
                         <Users size={14} />
                         Usuários
+                    </Link></li>
+                    <li><Link href="/sincronizar">
+                        <CardSim size={14} />
+                        Sincronizar
                     </Link></li>
                 </ul>
             </div>

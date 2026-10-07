@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import type { bem_patrimonial, Prisma, sala } from "@/app/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { postLogTransferencia } from "./logTransferenciasAction";
+import { BensParaAtualizar } from "./importBensAction";
 
 export type BemComLocal = bem_patrimonial & {
   Local: sala | null;
@@ -167,6 +168,47 @@ export async function patchLocaldoBem(codigo_patrimonial: string, local_id: stri
     };
   } catch (error) {
     console.error("Erro ao atualizar bem:", error);
+    return {
+      data: null,
+      status: 500,
+      message: "Erro ao atualizar bem",
+    };
+  }
+}
+
+export async function patchLocaldosBens(logs: BensParaAtualizar[]): Promise<ApiResponse<boolean | null>> {
+  try {
+    if (!logs || logs.length === 0) {
+      return {
+        data: false,
+        status: 200,
+        message: "Nenhum bem para atualizar",
+      };
+    }
+
+    const updates = logs.map((log) => {
+      return prisma.bem_patrimonial.update({
+        where: { id: log.bem.id },
+        data: { id_local: log.new_local.id }
+      })
+    });
+
+    await prisma.$transaction(updates, {
+      maxWait: 5000, // tempo máximo aguardando uma conexão livre no pool
+      timeout: 25000, // tempo limite total para executar todos os updates
+    });
+
+    revalidatePath("/sincronizar");
+    revalidatePath("/pendencias");
+    revalidatePath("/");
+
+    return {
+      data: true,
+      status: 200,
+      message: "Bens atualizados com sucesso",
+    };
+  } catch (error) {
+    console.error("Erro ao atualizar bens:", error);
     return {
       data: null,
       status: 500,

@@ -3,7 +3,7 @@
 import { LogTransferenciaPendente } from "@/actions/logTransferenciasAction";
 import { EnumStatusTransferencia } from "@/app/generated/prisma/enums";
 import { useDataProvider } from "@/Providers/DataProvider";
-import { ArrowDown, ArrowRight, Clock, Tag } from "lucide-react";
+import { ArrowDown, Clock, Tag } from "lucide-react";
 
 export type CardProps = {
     transf: LogTransferenciaPendente

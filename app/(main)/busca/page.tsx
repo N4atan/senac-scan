@@ -98,7 +98,7 @@ export default function Home() {
 
 
             <div className="flex flex-row gap-2 justify-between md:justify-start md:ml-auto ">
-              <button className="btn btn-ghost " onClick={() => mainImport()}>
+              <button className="btn btn-ghost ">
                 <CloudDownload size={14} />
                 Exportar
               </button>
