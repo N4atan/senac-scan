@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import type { bem_patrimonial, Prisma, sala } from "@/app/generated/prisma/client";
+import { EnumStatusTransferencia, type bem_patrimonial, type Prisma, type sala } from "@/app/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { postLogTransferencia } from "./logTransferenciasAction";
 import { BensParaAtualizar } from "./importBensAction";
@@ -193,10 +193,22 @@ export async function patchLocaldosBens(logs: BensParaAtualizar[]): Promise<ApiR
       })
     });
 
-    await prisma.$transaction(updates, {
+    const createsLogs = logs.map((item) =>
+      prisma.log_transferencia.create({
+        data: {
+          id_bem: item.bem.id,
+          id_local_origem: item.bem.id_local,
+          id_local_destino: item.new_local.id,
+          status_movimentacao: EnumStatusTransferencia.AGUARDANDO_SISPRO,
+        },
+      })
+    );
+
+    await prisma.$transaction([...updates, ...createsLogs], {
       maxWait: 5000, // tempo máximo aguardando uma conexão livre no pool
-      timeout: 25000, // tempo limite total para executar todos os updates
+      timeout: 40000, // tempo limite total para executar todos os updates
     });
+
 
     revalidatePath("/sincronizar");
     revalidatePath("/pendencias");
