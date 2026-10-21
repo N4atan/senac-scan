@@ -34,7 +34,7 @@ export const CardAuditoria = ({ auditoria }: CardAuditoriaProps) => {
 
                     <span className="badge badge-soft badge-sm">
                         <LucideCalendarDays size={12} />
-                        {auditoria.dataInicio.toLocaleDateString('pt-BR')}
+                        {auditoria.dataInicio ? new Date(auditoria.dataInicio).toLocaleDateString('pt-BR') : '-'}
                     </span>
                 </div>
 

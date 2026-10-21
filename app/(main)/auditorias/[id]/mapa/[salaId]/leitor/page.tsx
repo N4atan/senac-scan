@@ -153,29 +153,39 @@ export default function Home() {
                 <div className="badge badge-soft badge-warning mr-5">
                   <CircleDashed size={14} />
                 </div>
-                <span>Bens Pendentes</span>
+                <span>Bens Pendentes ({bensLeituraPendente.length})</span>
               </summary>
 
               <div className="collapse-content">
-                <ul className="list bg-base-100 w-full gap-4">
-                  {bensLeituraPendente.map((b) => (
-                    <li key={b.id} className="list-row border border-base-300 rounded-sm">
-                      <div className="list-col-grow">
-                        <div className="text-primary">
-                          {b.codigo_patrimonial}
+                {isLoadingListaLeitura ? (
+                  <div className="flex justify-center items-center py-6">
+                    <span className="loading loading-spinner loading-sm text-warning"></span>
+                  </div>
+                ) : bensLeituraPendente.length === 0 ? (
+                  <div className="py-4 text-center text-xs text-base-content/60">
+                    Nenhum bem pendente nesta sala.
+                  </div>
+                ) : (
+                  <ul className="list bg-base-100 w-full gap-4">
+                    {bensLeituraPendente.map((b) => (
+                      <li key={b.id} className="list-row border border-base-300 rounded-sm">
+                        <div className="list-col-grow">
+                          <div className="text-primary">
+                            {b.codigo_patrimonial}
+                          </div>
+
+                          <div className="text-xs uppercase font-semibold opacity-60">
+                            {b.descricao_bem}
+                          </div>
                         </div>
 
-                        <div className="text-xs uppercase font-semibold opacity-60">
-                          {b.descricao_bem}
+                        <div className="badge badge-warning self-center">
+                          <CircleDashed size={14} />
                         </div>
-                      </div>
-
-                      <div className="badge badge-warning self-center">
-                        <CircleDashed size={14} />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </details>
 
@@ -184,27 +194,37 @@ export default function Home() {
                 <div className="badge badge-soft badge-success mr-5">
                   <CircleCheck size={14} />
                 </div>
-                <span>Bens Coletados</span>
+                <span>Bens Coletados ({bensLeituraOk.length})</span>
               </summary>
 
               <div className="collapse-content">
-                <ul className="list bg-base-100 w-full gap-4">
-                  {bensLeituraOk.map((b) => (
-                    <li key={b.id} className="list-row border border-base-300 rounded-sm">
-                      <div className="list-col-grow">
-                        <div className="text-primary">
-                          {b.codigo_patrimonial}
+                {isLoadingListaLeitura ? (
+                  <div className="flex justify-center items-center py-6">
+                    <span className="loading loading-spinner loading-sm text-success"></span>
+                  </div>
+                ) : bensLeituraOk.length === 0 ? (
+                  <div className="py-4 text-center text-xs text-base-content/60">
+                    Nenhum bem conferido nesta sala ainda.
+                  </div>
+                ) : (
+                  <ul className="list bg-base-100 w-full gap-4">
+                    {bensLeituraOk.map((b) => (
+                      <li key={b.id} className="list-row border border-base-300 rounded-sm">
+                        <div className="list-col-grow">
+                          <div className="text-primary">
+                            {b.codigo_patrimonial}
+                          </div>
+                          <div className="text-xs uppercase font-semibold opacity-60">
+                            {b.descricao_bem}
+                          </div>
                         </div>
-                        <div className="text-xs uppercase font-semibold opacity-60">
-                          {b.descricao_bem}
+                        <div className="badge badge-success self-center">
+                          <CircleDashedCheck size={14} />
                         </div>
-                      </div>
-                      <div className="badge badge-success self-center">
-                        <CircleDashedCheck size={14} />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </details>
 
@@ -213,32 +233,39 @@ export default function Home() {
                 <div className="badge badge-soft badge-primary mr-5">
                   <ArrowRightLeft size={14} />
                 </div>
-                <span>Bens Movimentados</span>
+                <span>Bens Movimentados ({bensLeituraMovimentado.length})</span>
               </summary>
 
               <div className="collapse-content">
-                <ul className="list bg-base-100 w-full gap-4">
-                  {bensLeituraMovimentado.map((b) => (
-                    <li key={b.id} className="list-row border border-base-300 rounded-sm">
+                {isLoadingListaLeitura ? (
+                  <div className="flex justify-center items-center py-6">
+                    <span className="loading loading-spinner loading-sm text-primary"></span>
+                  </div>
+                ) : bensLeituraMovimentado.length === 0 ? (
+                  <div className="py-4 text-center text-xs text-base-content/60">
+                    Nenhum bem movimentado registrado nesta sala.
+                  </div>
+                ) : (
+                  <ul className="list bg-base-100 w-full gap-4">
+                    {bensLeituraMovimentado.map((b) => (
+                      <li key={b.id} className="list-row border border-base-300 rounded-sm">
+                        <div className="list-col-grow">
+                          <div className="text-primary">
+                            {b.codigo_patrimonial}
+                          </div>
 
-                      <div className="list-col-grow">
-                        <div className="text-primary">
-                          {b.codigo_patrimonial}
+                          <div className="text-xs uppercase font-semibold opacity-60">
+                            {b.descricao_bem}
+                          </div>
                         </div>
 
-                        <div className="text-xs uppercase font-semibold opacity-60">
-                          {b.descricao_bem}
+                        <div className="badge badge-primary self-center">
+                          <ArrowRightLeft size={14} />
                         </div>
-                      </div>
-
-                      <div className="badge badge-primary self-center">
-                        <ArrowRightLeft size={14} />
-                      </div>
-
-
-                    </li>
-                  ))}
-                </ul>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </details>
 
