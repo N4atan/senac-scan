@@ -46,6 +46,30 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      // Fallback: o NextAuth sempre salva o ID no token.sub por padrão
+      if (!token.id && token.sub) {
+        token.id = token.sub;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session?.user) {
+        return {
+          ...session,
+          user: {
+            ...session.user,
+            id: token.id || token.sub,
+          },
+        };
+      }
+      return session;
+    },
+  },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: '/auth',

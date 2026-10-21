@@ -27,7 +27,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <DataProvider>
           <Navbar />
 
-          {children}
+          <main className="flex-1 pb-24 lg:pb-0">
+            {children}
+          </main>
 
           <Toaster position="top-right" />
           

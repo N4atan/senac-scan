@@ -1,7 +1,7 @@
 "use client"
 
 
-import { List, ScanBarcode, Search } from "lucide-react";
+import { FoldersIcon, List, ScanBarcode, Search } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 
@@ -10,7 +10,7 @@ import Link from "next/link";
 export function Dock() {
 
     const pathname = usePathname();
-    
+
 
     return (
         <div className="lg:hidden dock">
@@ -28,6 +28,13 @@ export function Dock() {
                 <List size={14} />
                 <span className="dock-label">Pendências</span>
             </Link>
+
+
+            <Link href="/auditorias">
+                <FoldersIcon size={14} />
+                <span className="dock-label">Pendências</span>
+            </Link>
+
         </div>
     )
 }

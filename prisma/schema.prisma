@@ -1,82 +1,149 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
+// STREAMING_CHUNK:Configuring generator and datasource...
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+provider = "prisma-client"
+output   = "../app/generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
+provider = "postgresql"
 }
 
-model User {
-  id       Int    @id @default(autoincrement())
-  email    String @unique
-  password String
-  name     String
-}
-
+// STREAMING_CHUNK:Defining Enums...
 enum EnumStatusBem {
-  ATIVO
-  AGUARDANDO_MANUTENCAO
-  EM_MANUTENCAO
-  PERDIDO
-  BAIXADO
+ATIVO
+AGUARDANDO_MANUTENCAO
+EM_MANUTENCAO
+PERDIDO
+BAIXADO
 }
 
 enum EnumEscolas {
-  CENTRO
-  UNISINOS
+CENTRO
+UNISINOS
 }
 
 enum EnumCategoriaBem {
-  ELETRONICOS
-  MOVEIS
-  EQUIPAMENTOS
-  MATERIAL_ESCRITORIO
+ELETRONICOS
+MOVEIS
+EQUIPAMENTOS
+MATERIAL_ESCRITORIO
 }
 
 enum EnumStatusTransferencia {
-  AGUARDANDO_SISPRO
-  SISPRO_APROVADO
+AGUARDANDO_SISPRO
+SISPRO_APROVADO
 }
 
+enum StatusAuditoria {
+EM_ANDAMENTO
+FINALIZADA
+CANCELADA
+}
+
+enum StatusEtiqueta {
+OK
+SEM_ETIQUETA
+}
+
+enum StatusLeitura {
+OK
+MOVIMENTADO
+BAIXADO
+NAO_ENCONTRADO
+}
+
+// STREAMING_CHUNK:Defining User model with opposite relations...
+model User {
+id       Int    @id @default(autoincrement())
+email    String @unique
+password String
+name     String
+
+// Relacionamentos opostos adicionados
+auditorias      Auditoria[]
+itens_auditados ItemAuditado[]
+}
+
+// STREAMING_CHUNK:Defining bem_patrimonial model...
 model bem_patrimonial {
-  id                    Int              @id @default(autoincrement())
-  codigo_patrimonial    String?          @unique
-  descricao_bem         String
-  identificacao_interna String
-  categoria             EnumCategoriaBem
-  id_local              Int?
-  status                EnumStatusBem
+id                    Int              @id @default(autoincrement())
+codigo_patrimonial    String?          @unique
+descricao_bem         String
+identificacao_interna String
+categoria             EnumCategoriaBem
+id_local              Int?
+status                EnumStatusBem
 
-  Local              sala?               @relation("bem_patrimonial", fields: [id_local], references: [id])
-  logs_transferencia log_transferencia[] @relation("log_transferencia")
+Local              sala?               @relation("bem_patrimonial", fields: [id_local], references: [id])
+logs_transferencia log_transferencia[] @relation("log_transferencia")
+
+// Relacionamento oposto com ItemAuditado adicionado
+itens_auditados    ItemAuditado[]      @relation("item_auditado_bem")
 }
 
+// STREAMING_CHUNK:Defining sala model...
 model sala {
-  id            Int         @id @default(autoincrement())
-  codigo_sispro String?     @unique
-  descricao     String
-  escola        EnumEscolas
+id            Int         @id @default(autoincrement())
+codigo_sispro String?     @unique
+descricao     String
+escola        EnumEscolas
 
-  bens                   bem_patrimonial[]   @relation("bem_patrimonial")
-  transferencias_destino log_transferencia[] @relation("log_transferencia_destino")
-  transferencias_origem  log_transferencia[] @relation("log_transferencia_origem")
+bens                   bem_patrimonial[]   @relation("bem_patrimonial")
+transferencias_destino log_transferencia[] @relation("log_transferencia_destino")
+transferencias_origem  log_transferencia[] @relation("log_transferencia_origem")
+
+// Relacionamento oposto para as leituras efetuadas nesta sala
+itens_auditados        ItemAuditado[]      @relation("item_auditado_sala")
 }
 
+// STREAMING_CHUNK:Defining log_transferencia model...
 model log_transferencia {
-  id                  Int                     @id @default(autoincrement())
-  id_bem              Int
-  id_local_destino    Int?
-  id_local_origem     Int?
-  data_transferencia  DateTime                @default(now())
-  status_movimentacao EnumStatusTransferencia
+id                  Int                     @id @default(autoincrement())
+id_bem              Int
+id_local_destino    Int?
+id_local_origem     Int?
+data_transferencia  DateTime                @default(now())
+status_movimentacao EnumStatusTransferencia
 
-  bem           bem_patrimonial @relation("log_transferencia", fields: [id_bem], references: [id])
-  Local_destino sala?           @relation("log_transferencia_destino", fields: [id_local_destino], references: [id])
-  Local_origem  sala?           @relation("log_transferencia_origem", fields: [id_local_origem], references: [id])
+bem           bem_patrimonial @relation("log_transferencia", fields: [id_bem], references: [id])
+Local_destino sala?           @relation("log_transferencia_destino", fields: [id_local_destino], references: [id])
+Local_origem  sala?           @relation("log_transferencia_origem", fields: [id_local_origem], references: [id])
+}
+
+// STREAMING_CHUNK:Defining Auditoria model...
+model Auditoria {
+id          String          @id @default(uuid())
+titulo      String
+dataInicio  DateTime        @default(now())
+dataFim     DateTime?
+status      StatusAuditoria @default(EM_ANDAMENTO)
+
+usuario_id Int
+usuario    User @relation(fields: [usuario_id], references: [id])
+
+itensAuditados ItemAuditado[]
+}
+
+// STREAMING_CHUNK:Defining ItemAuditado model with correct types and relation names...
+model ItemAuditado {
+id String @id @default(uuid())
+
+auditoria_id String
+auditoria    Auditoria @relation(fields: [auditoria_id], references: [id])
+
+// Corrigido para Int para bater com o id Int de bem_patrimonial
+bem_patrimonial_id Int
+bem_patrimonial    bem_patrimonial @relation("item_auditado_bem", fields: [bem_patrimonial_id], references: [id])
+
+sala_id Int
+sala    sala @relation("item_auditado_sala", fields: [sala_id], references: [id])
+
+data_verificacao DateTime       @default(now())
+status_leitura   StatusLeitura
+status_etiqueta  StatusEtiqueta
+
+usuario_id Int
+usuario    User @relation(fields: [usuario_id], references: [id])
+
+@@unique([auditoria_id, bem_patrimonial_id])
 }

@@ -93,8 +93,9 @@ export default function BarcodeScan({ setResult }: { setResult: (result: string)
             {/* Controles da câmera e placeholder */}
             {!isScanning ? (
                 <>
-                    <div className="w-full max-w-md h-64 bg-base-200 rounded-2xl border border-base-300 flex justify-center items-center shadow-inner">
+                    <div className="w-full max-w-md h-64 bg-base-200 rounded-2xl border border-base-300 flex flex-col justify-center items-center shadow-inner">
                         <Barcode size={180} className="text-base-content/40" />
+                        <span className="text-base-content/40 text-sm">Câmera Desligada</span>
                     </div>
 
                     <button

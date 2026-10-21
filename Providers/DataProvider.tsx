@@ -1,10 +1,11 @@
 "use client";
 
+import { AuditoriaComBens, getAllAuditorias, getListaParaLeitura, getMapaSalas, ListaParaLeitura, postAuditoria, SalaMapeada } from "@/actions/auditoriaActions";
 import { BemComLocal, getAllBens, getAllSalas, patchLocaldoBem, patchLocaldosBens } from "@/actions/bensActions";
 import { BensParaAtualizar, mainImport } from "@/actions/importBensAction";
 import { getLogsTransferenciaPendente, LogTransferenciaPendente, patchStatusTransf } from "@/actions/logTransferenciasAction";
 import { getAllUsers, UserSemSenha } from "@/actions/usuariosAction";
-import { EnumStatusTransferencia, log_transferencia, sala, User } from "@/app/generated/prisma/client";
+import { EnumStatusTransferencia, log_transferencia, sala, User, Auditoria } from "@/app/generated/prisma/client";
 import { supabase } from "@/lib/supabase";
 import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { Toaster, toast } from "react-hot-toast";
@@ -49,7 +50,31 @@ interface DataProviderContext {
     isLoadingLogsTransferencias: boolean;
     isLoadingUsers: boolean;
     isLoadingBensParaAtualizar: boolean;
+    isLoadingAuditorias: boolean;
+    auditorias: AuditoriaComBens[];
+    setAuditorias: (auditorias: AuditoriaComBens[]) => void;
+    refreshAuditorias: () => Promise<void>;
+    createAuditoria: (formData: FormData) => Promise<boolean>;
 
+    auditoriaAtiva: AuditoriaComBens | null;
+    setAuditoriaAtiva: (auditoria: AuditoriaComBens | null) => void;
+    auditoriaSelecionada: AuditoriaComBens | null;
+    setAuditoriaSelecionada: (auditoria: AuditoriaComBens | null) => void;
+    selecionarAuditoria: (auditoriaOuId: AuditoriaComBens | string | null) => void;
+    limparAuditoriaAtiva: () => void;
+
+    salasPendentes: SalaMapeada[];
+    salasConcluidas: SalaMapeada[];
+    isLoadingMapaSalas: boolean;
+    refreshMapaSalas: (auditoriaId?: string) => Promise<void>;
+
+    listaLeitura: ListaParaLeitura;
+    bensLeituraOk: BemComLocal[];
+    bensLeituraMovimentado: BemComLocal[];
+    bensLeituraPendente: BemComLocal[];
+    isLoadingListaLeitura: boolean;
+    carregarListaLeitura: (salaId: string, auditoriaId: string) => Promise<ListaParaLeitura | null>;
+    setListaLeitura: React.Dispatch<React.SetStateAction<ListaParaLeitura>>;
 }
 
 const Context = createContext<DataProviderContext | null>(null);
@@ -60,18 +85,33 @@ export function DataProvider({ children }: DataProviderProps) {
     const [logsTransferencias, setLogsTransferencias] = useState<LogTransferenciaPendente[]>([]);
     const [users, setUsers] = useState<UserSemSenha[]>([]);
     const [bensParaAtualizar, setBensParaAtualizar] = useState<BensParaAtualizar[]>([]);
+    const [auditorias, setAuditorias] = useState<AuditoriaComBens[]>([]);
+    const [auditoriaAtiva, setAuditoriaAtiva] = useState<AuditoriaComBens | null>(null);
+
+    const [salasPendentes, setSalasPendentes] = useState<SalaMapeada[]>([]);
+    const [salasConcluidas, setSalasConcluidas] = useState<SalaMapeada[]>([]);
+    const [isLoadingMapaSalas, setIsLoadingMapaSalas] = useState<boolean>(false);
+
+    const [listaLeitura, setListaLeitura] = useState<ListaParaLeitura>({
+        bensLeituraOk: [],
+        bensLeituraMovimentado: [],
+        bensLeituraPendente: []
+    });
+    const [isLoadingListaLeitura, setIsLoadingListaLeitura] = useState<boolean>(false);
 
     const [isLoadingBens, setIsLoadingBens] = useState<boolean>(false);
     const [isLoadingSalas, setIsLoadingSalas] = useState<boolean>(false);
     const [isLoadingLogsTransferencias, setIsLoadingLogsTransferencias] = useState<boolean>(false);
     const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false);
     const [isLoadingBensParaAtualizar, setIsLoadingBensParaAtualizar] = useState<boolean>(false);
+    const [isLoadingAuditorias, setIsLoadingAuditorias] = useState<boolean>(false);
 
     useEffect(() => {
         refreshBens();
         refreshSalas();
         refreshLogsTransferencias();
         refreshUsers();
+        refreshAuditorias();
         const subscription = supabase
             .channel('schema-changes')
             .on(
@@ -91,6 +131,23 @@ export function DataProvider({ children }: DataProviderProps) {
             subscription.unsubscribe();
         };
     }, []);
+
+    useEffect(() => {
+        const savedId = typeof window !== "undefined" ? localStorage.getItem("senac_scan_auditoria_ativa_id") : null;
+        if (savedId && auditorias.length > 0 && !auditoriaAtiva) {
+            const encontrada = auditorias.find((a) => a.id === savedId);
+            if (encontrada) setAuditoriaAtiva(encontrada);
+        }
+    }, [auditorias, auditoriaAtiva]);
+
+    useEffect(() => {
+        if (auditoriaAtiva?.id) {
+            refreshMapaSalas(auditoriaAtiva.id);
+        } else {
+            setSalasPendentes([]);
+            setSalasConcluidas([]);
+        }
+    }, [auditoriaAtiva?.id]);
 
     const refreshBens = async () => {
         setIsLoadingBens(true);
@@ -117,6 +174,96 @@ export function DataProvider({ children }: DataProviderProps) {
         }).finally(() => {
             setIsLoadingLogsTransferencias(false);
         });
+    };
+
+    const refreshAuditorias = async () => {
+        setIsLoadingAuditorias(true);
+        await getAllAuditorias().then((res) => {
+            setAuditorias(res);
+            setAuditoriaAtiva((prev) => {
+                if (!prev) return null;
+                return res.find((a: AuditoriaComBens) => a.id === prev.id) || null;
+            });
+        }).finally(() => {
+            setIsLoadingAuditorias(false);
+        });
+    };
+
+    const selecionarAuditoria = (auditoriaOuId: AuditoriaComBens | string | null) => {
+        if (!auditoriaOuId) {
+            setAuditoriaAtiva(null);
+            if (typeof window !== "undefined") {
+                localStorage.removeItem("senac_scan_auditoria_ativa_id");
+            }
+            return;
+        }
+
+        if (typeof auditoriaOuId === "string") {
+            const encontrada = auditorias.find((a) => a.id === auditoriaOuId) || null;
+            setAuditoriaAtiva(encontrada);
+            if (typeof window !== "undefined" && encontrada) {
+                localStorage.setItem("senac_scan_auditoria_ativa_id", encontrada.id);
+            }
+        } else {
+            setAuditoriaAtiva(auditoriaOuId);
+            if (typeof window !== "undefined") {
+                localStorage.setItem("senac_scan_auditoria_ativa_id", auditoriaOuId.id);
+            }
+        }
+    };
+
+    const limparAuditoriaAtiva = () => {
+        setAuditoriaAtiva(null);
+        setSalasPendentes([]);
+        setSalasConcluidas([]);
+        if (typeof window !== "undefined") {
+            localStorage.removeItem("senac_scan_auditoria_ativa_id");
+        }
+    };
+
+    const refreshMapaSalas = async (auditoriaId?: string) => {
+        const id = auditoriaId || auditoriaAtiva?.id;
+        if (!id) {
+            setSalasPendentes([]);
+            setSalasConcluidas([]);
+            return;
+        }
+
+        setIsLoadingMapaSalas(true);
+        try {
+            const resp = await getMapaSalas(id);
+            if (resp.status === 200 && resp.data) {
+                setSalasPendentes(resp.data.salasPendentes);
+                setSalasConcluidas(resp.data.salasConcluidas);
+            }
+        } catch (error) {
+            console.error("Erro ao carregar mapa de salas:", error);
+        } finally {
+            setIsLoadingMapaSalas(false);
+        }
+    };
+
+    const carregarListaLeitura = async (salaId: string, auditoriaId: string): Promise<ListaParaLeitura | null> => {
+        setIsLoadingListaLeitura(true);
+        try {
+            const resp = await getListaParaLeitura(salaId, auditoriaId);
+            if (resp.status === 200 && resp.data) {
+                setListaLeitura(resp.data);
+                return resp.data;
+            } else {
+                setListaLeitura({
+                    bensLeituraOk: [],
+                    bensLeituraMovimentado: [],
+                    bensLeituraPendente: []
+                });
+                return null;
+            }
+        } catch (error) {
+            console.error("Erro ao carregar lista para leitura:", error);
+            return null;
+        } finally {
+            setIsLoadingListaLeitura(false);
+        }
     };
 
     const updateLocalBem = async (codigo_patrimonial: string, local_id: string | number): Promise<boolean> => {
@@ -221,11 +368,89 @@ export function DataProvider({ children }: DataProviderProps) {
             refreshBens();
             refreshSalas();
             refreshLogsTransferencias();
+            refreshAuditorias();
+            if (auditoriaAtiva?.id) {
+                refreshMapaSalas(auditoriaAtiva.id);
+            }
         }, 500);
     };
 
+    
+
+    const createAuditoria = async (formData: FormData): Promise<boolean> => {
+        const toastId = toast.loading("Criando Auditoria...");
+        try {
+            const titulo = formData.get("titulo") as string | null;
+
+            if (!titulo || !titulo.trim()) {
+                toast.error("O título da auditoria é obrigatório.", { id: toastId });
+                return false;
+            }
+
+            const resp = await postAuditoria(titulo.trim());
+            if (resp.status === 200 && resp.data) {
+                toast.success(resp.message || "Auditoria criada com sucesso!", { id: toastId });
+                await refreshAuditorias();
+                return true;
+            } else {
+                toast.error(resp.message || "Erro ao criar auditoria.", { id: toastId });
+                return false;
+            }
+        } catch (error) {
+            console.error("Erro ao criar auditoria:", error);
+            toast.error("Erro inesperado ao criar auditoria.", { id: toastId });
+            return false;
+        }
+    };
+
     return (
-        <Context.Provider value={{ salas, setSalas, bens, setBens, logsTransferencias, setLogsTransferencias, users, setUsers, refreshBens, refreshSalas, refreshLogsTransferencias, refreshUsers, updateLocalBem, updateManyLocalBem, updateStatusTransf, handleTXTFileUpload, isLoadingBens, isLoadingSalas, isLoadingLogsTransferencias, isLoadingUsers, bensParaAtualizar, setBensParaAtualizar, isLoadingBensParaAtualizar }}>
+        <Context.Provider value={{
+            salas,
+            setSalas,
+            bens,
+            setBens,
+            logsTransferencias,
+            setLogsTransferencias,
+            users,
+            setUsers,
+            refreshBens,
+            refreshSalas,
+            refreshLogsTransferencias,
+            refreshUsers,
+            updateLocalBem,
+            updateManyLocalBem,
+            updateStatusTransf,
+            handleTXTFileUpload,
+            isLoadingBens,
+            isLoadingSalas,
+            isLoadingLogsTransferencias,
+            isLoadingUsers,
+            bensParaAtualizar,
+            setBensParaAtualizar,
+            isLoadingBensParaAtualizar,
+            auditorias,
+            setAuditorias,
+            refreshAuditorias,
+            isLoadingAuditorias,
+            createAuditoria,
+            auditoriaAtiva,
+            setAuditoriaAtiva,
+            auditoriaSelecionada: auditoriaAtiva,
+            setAuditoriaSelecionada: setAuditoriaAtiva,
+            selecionarAuditoria,
+            limparAuditoriaAtiva,
+            salasPendentes,
+            salasConcluidas,
+            isLoadingMapaSalas,
+            refreshMapaSalas,
+            listaLeitura,
+            bensLeituraOk: listaLeitura.bensLeituraOk,
+            bensLeituraMovimentado: listaLeitura.bensLeituraMovimentado,
+            bensLeituraPendente: listaLeitura.bensLeituraPendente,
+            isLoadingListaLeitura,
+            carregarListaLeitura,
+            setListaLeitura
+        }}>
             <Toaster position="top-right" />
             {children}
         </Context.Provider>

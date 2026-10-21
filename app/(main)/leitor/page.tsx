@@ -21,7 +21,7 @@ export default function Home() {
 
   }, [scanResult, bens, salas])
 
-  
+
 
   return (
     <div className="p-4">

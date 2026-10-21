@@ -1,6 +1,6 @@
 
 
-import { Box, CardSim, List, QrCode, ScanBarcode, ScanQrCode, Search, Users } from "lucide-react";
+import { Box, CardSim, FoldersIcon, List, QrCode, ScanBarcode, ScanQrCode, Search, Users } from "lucide-react";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -10,7 +10,7 @@ import { BtnLogout } from "../Buttons/BtnLogout";
 
 export async function Navbar() {
     const session = await getServerSession(authOptions);
-    
+
 
     return (
         <div className="hidden lg:flex lg:sticky lg:top-0 lg:z-50 navbar bg-base-100 shadow-sm">
@@ -42,6 +42,12 @@ export async function Navbar() {
                         <CardSim size={14} />
                         Sincronizar
                     </Link></li>
+                    <li>
+                        <Link href="/auditorias">
+                            <FoldersIcon size={14} />
+                            Auditorias
+                        </Link>
+                    </li>
                 </ul>
             </div>
 
