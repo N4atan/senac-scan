@@ -30,9 +30,9 @@ export function Dock() {
             </Link>
 
 
-            <Link href="/auditorias">
+            <Link className={pathname.startsWith("/auditorias") ? "dock-active" : ""} href="/auditorias">
                 <FoldersIcon size={14} />
-                <span className="dock-label">Pendências</span>
+                <span className="dock-label">Auditorias</span>
             </Link>
 
         </div>

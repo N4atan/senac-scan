@@ -6,7 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { ApiResponse } from "./logTransferenciasAction";
 import { AuditoriaAggregateArgs } from "@/app/generated/prisma/models";
-import { Auditoria, EnumEscolas, ItemAuditado, StatusLeitura } from "@/app/generated/prisma/client";
+import { Auditoria, EnumEscolas, ItemAuditado, StatusEtiqueta, StatusLeitura } from "@/app/generated/prisma/client";
 import { BemComLocal, getAllBens } from "./bensActions";
 
 export type AuditoriaComBens = Auditoria & {
@@ -242,6 +242,103 @@ export async function getListaParaLeitura(salaId: string, auditoriaId: string): 
             },
             status: 500,
             message: "Erro ao buscar a lista de bens"
+        };
+    }
+}
+
+export async function registrarItemAuditado(
+    auditoriaId: string,
+    salaId: number,
+    bemId: number,
+    statusEtiqueta: StatusEtiqueta = StatusEtiqueta.OK
+): Promise<ApiResponse<ItemAuditado | null>> {
+    try {
+        const session = await getServerSession(authOptions);
+
+        if (!session?.user) {
+            return {
+                data: null,
+                status: 401,
+                message: "Usuário não autenticado",
+            };
+        }
+
+        let usuarioId = Number((session.user as any)?.id);
+        if (!usuarioId || isNaN(usuarioId)) {
+            if (session.user.email) {
+                const dbUser = await prisma.user.findUnique({
+                    where: { email: session.user.email },
+                    select: { id: true }
+                });
+                if (dbUser) usuarioId = dbUser.id;
+            }
+        }
+
+        if (!usuarioId || isNaN(usuarioId)) {
+            return {
+                data: null,
+                status: 400,
+                message: "Identificador de usuário inválido ou não encontrado",
+            };
+        }
+
+        const bem = await prisma.bem_patrimonial.findUnique({
+            where: { id: bemId },
+            include: { Local: true }
+        });
+
+        if (!bem) {
+            return {
+                data: null,
+                status: 404,
+                message: "Bem patrimonial não encontrado",
+            };
+        }
+
+        // Verifica se o bem pertence à sala onde foi lido
+        const isNaSalaCorreta = bem.id_local === salaId;
+        const statusLeitura = isNaSalaCorreta ? StatusLeitura.OK : StatusLeitura.MOVIMENTADO;
+
+        // Upsert do item auditado
+        const itemAuditado = await prisma.itemAuditado.upsert({
+            where: {
+                auditoria_id_bem_patrimonial_id: {
+                    auditoria_id: auditoriaId,
+                    bem_patrimonial_id: bemId,
+                }
+            },
+            update: {
+                sala_id: salaId,
+                status_leitura: statusLeitura,
+                status_etiqueta: statusEtiqueta,
+                usuario_id: usuarioId,
+                data_verificacao: new Date(),
+            },
+            create: {
+                auditoria_id: auditoriaId,
+                sala_id: salaId,
+                bem_patrimonial_id: bemId,
+                status_leitura: statusLeitura,
+                status_etiqueta: statusEtiqueta,
+                usuario_id: usuarioId,
+            }
+        });
+
+        const msg = isNaSalaCorreta
+            ? `Bem ${bem.codigo_patrimonial} validado com sucesso!`
+            : `Atenção: Bem ${bem.codigo_patrimonial} cadastrado em "${bem.Local?.descricao || 'Outra sala'}", registrado como MOVIMENTADO!`;
+
+        return {
+            data: itemAuditado,
+            status: 200,
+            message: msg,
+        };
+    } catch (error) {
+        console.error("Erro ao registrar leitura do bem:", error);
+        return {
+            data: null,
+            status: 500,
+            message: "Erro ao registrar leitura do bem",
         };
     }
 }

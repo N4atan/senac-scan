@@ -55,7 +55,7 @@ export default function Home() {
 
           <div className="stat-title">Progresso</div>
           <div className="stat-value flex flex-col justify-center items-start mb-2">
-            <span className="text-success ">{Math.round((auditoriaAtiva?.itensAuditados.length || 0 / bens.length * 100))} %</span>
+            <span className="text-success ">{Math.round(((auditoriaAtiva?.itensAuditados?.length || 0) / (bens.length || 1)) * 100)} %</span>
             <progress className="progress progress-accent w-full" value={((auditoriaAtiva?.itensAuditados?.length || 0) / (bens.length || 1)) * 100} max="100"></progress>
           </div>
           <div className="stat-desc text-secondary">

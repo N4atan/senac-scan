@@ -7,6 +7,7 @@ import { useDataProvider } from "@/Providers/DataProvider";
 import { ArrowRightLeft, Barcode, CircleCheck, CircleDashed, CircleDashedCheck, ListTodo, LocateIcon, MapPinned, SearchX } from "lucide-react";
 import { useParams } from 'next/navigation';
 import { useState, useMemo, useEffect } from "react";
+import toast from "react-hot-toast";
 
 
 export default function Home() {
@@ -19,7 +20,8 @@ export default function Home() {
     bensLeituraOk,
     bensLeituraMovimentado,
     isLoadingListaLeitura,
-    carregarListaLeitura
+    carregarListaLeitura,
+    registrarLeitura
   } = useDataProvider();
 
   const params = useParams<{ id: string, salaId: string }>();
@@ -37,7 +39,29 @@ export default function Home() {
 
     return bens.find((b) => b.codigo_patrimonial === scanResult);
 
-  }, [scanResult, bens, salas])
+  }, [scanResult, bens, salas]);
+
+  const [isValidating, setIsValidating] = useState<boolean>(false);
+
+  const handleValidar = async () => {
+    if (!bemEncontrado) {
+      toast.error("Nenhum bem patrimonial identificado para validação.");
+      return;
+    }
+
+    const jaAuditadoOk = bensLeituraOk.some(b => b.id === bemEncontrado.id);
+    if (jaAuditadoOk) {
+      toast("Este bem já consta como conferido nesta sala!", { icon: "ℹ️" });
+    }
+
+    setIsValidating(true);
+    const sucesso = await registrarLeitura(salaId, auditoriaId, bemEncontrado.id);
+    setIsValidating(false);
+
+    if (sucesso) {
+      setScanResult("");
+    }
+  };
 
 
   useEffect(() => {
@@ -73,9 +97,37 @@ export default function Home() {
             </div>
 
             {bemEncontrado ? (
-              <button className="btn btn-primary w-full">
-                Validar
-              </button>
+              <div className="w-full flex flex-col gap-2 p-3 bg-base-200 rounded-lg border border-base-300">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span className="text-primary font-bold text-sm">#{bemEncontrado.codigo_patrimonial}</span>
+                    <p className="text-xs font-semibold">{bemEncontrado.descricao_bem}</p>
+                  </div>
+                  {bemEncontrado.id_local === parseInt(salaId) ? (
+                    <span className="badge badge-success badge-sm">Desta Sala</span>
+                  ) : (
+                    <span className="badge badge-warning badge-sm">Movimentado</span>
+                  )}
+                </div>
+
+                {bemEncontrado.id_local !== parseInt(salaId) && (
+                  <p className="text-xs text-warning">
+                    ⚠️ Cadastrado em: <strong>{bemEncontrado.Local?.descricao || "Outro local"}</strong>. Será registrado como MOVIMENTADO.
+                  </p>
+                )}
+
+                <button 
+                  className="btn btn-primary btn-sm w-full mt-1"
+                  disabled={isValidating}
+                  onClick={handleValidar}
+                >
+                  {isValidating ? (
+                    <span className="loading loading-spinner loading-xs"></span>
+                  ) : (
+                    "Confirmar Validação"
+                  )}
+                </button>
+              </div>
             ) : (
               scanResult.trim() !== "" && (
                 <div className="alert alert-warning max-w-md text-sm">

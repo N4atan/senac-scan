@@ -1,6 +1,6 @@
 "use client";
 
-import { AuditoriaComBens, getAllAuditorias, getListaParaLeitura, getMapaSalas, ListaParaLeitura, postAuditoria, SalaMapeada } from "@/actions/auditoriaActions";
+import { AuditoriaComBens, getAllAuditorias, getListaParaLeitura, getMapaSalas, ListaParaLeitura, postAuditoria, registrarItemAuditado, SalaMapeada } from "@/actions/auditoriaActions";
 import { BemComLocal, getAllBens, getAllSalas, patchLocaldoBem, patchLocaldosBens } from "@/actions/bensActions";
 import { BensParaAtualizar, mainImport } from "@/actions/importBensAction";
 import { getLogsTransferenciaPendente, LogTransferenciaPendente, patchStatusTransf } from "@/actions/logTransferenciasAction";
@@ -75,6 +75,7 @@ interface DataProviderContext {
     isLoadingListaLeitura: boolean;
     carregarListaLeitura: (salaId: string, auditoriaId: string) => Promise<ListaParaLeitura | null>;
     setListaLeitura: React.Dispatch<React.SetStateAction<ListaParaLeitura>>;
+    registrarLeitura: (salaId: string, auditoriaId: string, bemId: number) => Promise<boolean>;
 }
 
 const Context = createContext<DataProviderContext | null>(null);
@@ -256,13 +257,39 @@ export function DataProvider({ children }: DataProviderProps) {
                     bensLeituraMovimentado: [],
                     bensLeituraPendente: []
                 });
+                if (resp.status === 404) {
+                    toast(resp.message || "Nenhum bem cadastrado nesta sala.", { icon: "ℹ️" });
+                } else {
+                    toast.error(resp.message || "Erro ao carregar bens da sala.");
+                }
                 return null;
             }
         } catch (error) {
             console.error("Erro ao carregar lista para leitura:", error);
+            toast.error("Erro inesperado ao carregar bens da sala.");
             return null;
         } finally {
             setIsLoadingListaLeitura(false);
+        }
+    };
+
+    const registrarLeitura = async (salaId: string, auditoriaId: string, bemId: number): Promise<boolean> => {
+        const toastId = toast.loading("Registrando conferência...");
+        try {
+            const resp = await registrarItemAuditado(auditoriaId, parseInt(salaId), bemId);
+            if (resp.status === 200 && resp.data) {
+                toast.success(resp.message || "Conferência registrada com sucesso!", { id: toastId });
+                await carregarListaLeitura(salaId, auditoriaId);
+                await refreshAuditorias();
+                return true;
+            } else {
+                toast.error(resp.message || "Erro ao registrar conferência.", { id: toastId });
+                return false;
+            }
+        } catch (error) {
+            console.error("Erro ao registrar conferência:", error);
+            toast.error("Erro inesperado ao registrar conferência.", { id: toastId });
+            return false;
         }
     };
 
@@ -449,7 +476,8 @@ export function DataProvider({ children }: DataProviderProps) {
             bensLeituraPendente: listaLeitura.bensLeituraPendente,
             isLoadingListaLeitura,
             carregarListaLeitura,
-            setListaLeitura
+            setListaLeitura,
+            registrarLeitura
         }}>
             <Toaster position="top-right" />
             {children}
