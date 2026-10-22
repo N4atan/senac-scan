@@ -396,10 +396,10 @@ export async function registrarItemAuditado(
             ? `Bem ${bem.codigo_patrimonial} validado com sucesso!`
             : `Atenção: Bem ${bem.codigo_patrimonial} cadastrado em "${bem.Local?.descricao || 'Outra sala'}", registrado como MOVIMENTADO!`;
 
-        revalidatePath('/', 'layout')
-        revalidatePath(`/auditoria/${salaId}/mapa`)
-        revalidatePath(`/auditoria/${salaId}/mapa/${salaId}`)
-        revalidatePath(`/auditoria/${salaId}/mapa/${salaId}/leitor`)
+        
+        revalidatePath(`/auditorias/${salaId}/mapa`)
+        revalidatePath(`/auditorias/${salaId}/mapa/${salaId}`)
+        revalidatePath(`/auditorias/${salaId}/mapa/${salaId}/leitor`)
         return {
             data: itemAuditado,
             status: 200,
