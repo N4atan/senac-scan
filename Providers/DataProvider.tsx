@@ -310,6 +310,8 @@ export function DataProvider({ children }: DataProviderProps) {
                 toast.success(resp.message || "Conferência registrada com sucesso!", { id: toastId });
                 await carregarListaLeitura(salaId, auditoriaId);
                 await refreshAuditorias();
+                await refreshMapaSalas(auditoriaId);
+                await refreshBens();
                 return true;
             } else {
                 toast.error(resp.message || "Erro ao registrar conferência.", { id: toastId });

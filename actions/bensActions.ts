@@ -160,6 +160,7 @@ export async function patchLocaldoBem(codigo_patrimonial: string, local_id: stri
     revalidatePath("/leitor");
     revalidatePath("/pendencias");
     revalidatePath("/");
+    revalidatePath(`/auditoria/${local_id}/mapa`);
 
     return {
       data: bem,

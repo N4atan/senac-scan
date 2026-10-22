@@ -7,7 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { ApiResponse } from "./logTransferenciasAction";
 import { AuditoriaAggregateArgs } from "@/app/generated/prisma/models";
 import { Auditoria, EnumEscolas, ItemAuditado, Prisma, StatusEtiqueta, StatusLeitura } from "@/app/generated/prisma/client";
-import { BemComLocal, getAllBens } from "./bensActions";
+import { BemComLocal, getAllBens, patchLocaldoBem } from "./bensActions";
 
 export type AuditoriaComBens = Auditoria & {
     itensAuditados: ItemAuditado[];
@@ -338,6 +338,8 @@ export async function registrarItemAuditado(
             include: { Local: true }
         });
 
+
+
         if (!bem) {
             return {
                 data: null,
@@ -349,6 +351,21 @@ export async function registrarItemAuditado(
         // Verifica se o bem pertence à sala onde foi lido
         const isNaSalaCorreta = bem.id_local === salaId;
         const statusLeitura = isNaSalaCorreta ? StatusLeitura.OK : StatusLeitura.MOVIMENTADO;
+
+        if (!isNaSalaCorreta) {
+            console.log("iniciando atualização do bem")
+            const mudaLocal = await patchLocaldoBem(bem.codigo_patrimonial!, salaId.toString());
+            console.log("atualização do bem concluida")
+            console.log(mudaLocal.data)
+
+            if (!mudaLocal) {
+                return {
+                    data: null,
+                    status: 500,
+                    message: "Erro ao atualizar local do bem",
+                };
+            }
+        }
 
         // Upsert do item auditado
         const itemAuditado = await prisma.itemAuditado.upsert({
@@ -379,6 +396,10 @@ export async function registrarItemAuditado(
             ? `Bem ${bem.codigo_patrimonial} validado com sucesso!`
             : `Atenção: Bem ${bem.codigo_patrimonial} cadastrado em "${bem.Local?.descricao || 'Outra sala'}", registrado como MOVIMENTADO!`;
 
+        revalidatePath('/', 'layout')
+        revalidatePath(`/auditoria/${salaId}/mapa`)
+        revalidatePath(`/auditoria/${salaId}/mapa/${salaId}`)
+        revalidatePath(`/auditoria/${salaId}/mapa/${salaId}/leitor`)
         return {
             data: itemAuditado,
             status: 200,
@@ -393,3 +414,5 @@ export async function registrarItemAuditado(
         };
     }
 }
+
+

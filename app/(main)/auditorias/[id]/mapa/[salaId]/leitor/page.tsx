@@ -283,6 +283,7 @@ export default function Home() {
 
                           <div className="text-xs uppercase font-semibold opacity-60">
                             {b.descricao_bem}
+                            {b.Local?.descricao}
                           </div>
                         </div>
 
