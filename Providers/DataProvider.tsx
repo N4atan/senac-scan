@@ -1,11 +1,11 @@
 "use client";
 
-import { AuditoriaComBens, getAllAuditorias, getListaParaLeitura, getMapaSalas, ListaParaLeitura, postAuditoria, registrarItemAuditado, SalaMapeada } from "@/actions/auditoriaActions";
+import { AuditoriaComBens, getAllAuditorias, getListaParaLeitura, getMapaSalas, ListaParaLeitura, MapaSalas, postAuditoria, putAuditoria, registrarItemAuditado, SalaMapeada } from "@/actions/auditoriaActions";
 import { BemComLocal, getAllBens, getAllSalas, patchLocaldoBem, patchLocaldosBens } from "@/actions/bensActions";
 import { BensParaAtualizar, mainImport } from "@/actions/importBensAction";
 import { getLogsTransferenciaPendente, LogTransferenciaPendente, patchStatusTransf } from "@/actions/logTransferenciasAction";
 import { getAllUsers, UserSemSenha } from "@/actions/usuariosAction";
-import { EnumStatusTransferencia, log_transferencia, sala, User, Auditoria } from "@/app/generated/prisma/client";
+import { EnumStatusTransferencia, log_transferencia, sala, User, Auditoria, Prisma } from "@/app/generated/prisma/client";
 import { supabase } from "@/lib/supabase";
 import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { Toaster, toast } from "react-hot-toast";
@@ -62,9 +62,9 @@ interface DataProviderContext {
     setAuditoriaSelecionada: (auditoria: AuditoriaComBens | null) => void;
     selecionarAuditoria: (auditoriaOuId: AuditoriaComBens | string | null) => void;
     limparAuditoriaAtiva: () => void;
+    updateAuditoria: (auditoriaId: string, fields: Prisma.AuditoriaUpdateInput) => Promise<boolean>;
 
-    salasPendentes: SalaMapeada[];
-    salasConcluidas: SalaMapeada[];
+    mapaSalas: MapaSalas;
     isLoadingMapaSalas: boolean;
     refreshMapaSalas: (auditoriaId?: string) => Promise<void>;
 
@@ -89,8 +89,13 @@ export function DataProvider({ children }: DataProviderProps) {
     const [auditorias, setAuditorias] = useState<AuditoriaComBens[]>([]);
     const [auditoriaAtiva, setAuditoriaAtiva] = useState<AuditoriaComBens | null>(null);
 
-    const [salasPendentes, setSalasPendentes] = useState<SalaMapeada[]>([]);
-    const [salasConcluidas, setSalasConcluidas] = useState<SalaMapeada[]>([]);
+    
+    const [mapaSalas, setMapaSalas] = useState<MapaSalas>({
+        salasPendentes: [],
+        salasConcluidas: [],
+        salasVazias: []
+    });
+
     const [isLoadingMapaSalas, setIsLoadingMapaSalas] = useState<boolean>(false);
 
     const [listaLeitura, setListaLeitura] = useState<ListaParaLeitura>({
@@ -145,8 +150,11 @@ export function DataProvider({ children }: DataProviderProps) {
         if (auditoriaAtiva?.id) {
             refreshMapaSalas(auditoriaAtiva.id);
         } else {
-            setSalasPendentes([]);
-            setSalasConcluidas([]);
+            setMapaSalas({
+                salasPendentes: [],
+                salasConcluidas: [],
+                salasVazias: []
+            });
         }
     }, [auditoriaAtiva?.id]);
 
@@ -215,18 +223,40 @@ export function DataProvider({ children }: DataProviderProps) {
 
     const limparAuditoriaAtiva = () => {
         setAuditoriaAtiva(null);
-        setSalasPendentes([]);
-        setSalasConcluidas([]);
+        setMapaSalas({
+            salasPendentes: [],
+            salasConcluidas: [],
+            salasVazias: []
+        });
         if (typeof window !== "undefined") {
             localStorage.removeItem("senac_scan_auditoria_ativa_id");
         }
     };
 
+    const updateAuditoria = async (auditoriaId: string, fields: Prisma.AuditoriaUpdateInput) => {
+        try {
+            const toastId = toast.loading("Atualizando Auditoria...");
+
+            const resp = await putAuditoria(auditoriaId, fields);
+            if (resp.data) {
+                toast.success(resp.message, { id: toastId });
+                refreshAuditorias();
+                return true;
+            }
+            toast.error(resp.message, { id: toastId });
+            return false;
+
+        } catch (error) {
+            console.error("Erro ao atualizar auditoria:", error);
+            toast.error("Erro inesperado ao atualizar auditoria.");
+            return false;
+        }
+    }
+
     const refreshMapaSalas = async (auditoriaId?: string) => {
         const id = auditoriaId || auditoriaAtiva?.id;
         if (!id) {
-            setSalasPendentes([]);
-            setSalasConcluidas([]);
+            console.error('id da auditoria não informado')
             return;
         }
 
@@ -234,8 +264,7 @@ export function DataProvider({ children }: DataProviderProps) {
         try {
             const resp = await getMapaSalas(id);
             if (resp.status === 200 && resp.data) {
-                setSalasPendentes(resp.data.salasPendentes);
-                setSalasConcluidas(resp.data.salasConcluidas);
+                setMapaSalas(resp.data);
             }
         } catch (error) {
             console.error("Erro ao carregar mapa de salas:", error);
@@ -402,7 +431,7 @@ export function DataProvider({ children }: DataProviderProps) {
         }, 500);
     };
 
-    
+
 
     const createAuditoria = async (formData: FormData): Promise<boolean> => {
         const toastId = toast.loading("Criando Auditoria...");
@@ -466,8 +495,7 @@ export function DataProvider({ children }: DataProviderProps) {
             setAuditoriaSelecionada: setAuditoriaAtiva,
             selecionarAuditoria,
             limparAuditoriaAtiva,
-            salasPendentes,
-            salasConcluidas,
+            mapaSalas,
             isLoadingMapaSalas,
             refreshMapaSalas,
             listaLeitura,
@@ -477,7 +505,8 @@ export function DataProvider({ children }: DataProviderProps) {
             isLoadingListaLeitura,
             carregarListaLeitura,
             setListaLeitura,
-            registrarLeitura
+            registrarLeitura,
+            updateAuditoria
         }}>
             <Toaster position="top-right" />
             {children}

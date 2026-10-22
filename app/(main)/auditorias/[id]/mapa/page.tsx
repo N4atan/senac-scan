@@ -1,5 +1,5 @@
 "use client";
-import { BarcodeIcon, Building2Icon, CheckCircle, CloudDownload, FilePenLineIcon, Filter, List, Plus, Search } from "lucide-react";
+import { BarcodeIcon, Building2Icon, CheckCircle, ChevronRight, CloudDownload, FilePenLineIcon, Filter, List, Plus, Search } from "lucide-react";
 
 
 import { useDataProvider } from "@/Providers/DataProvider";
@@ -16,8 +16,7 @@ export default function Home() {
     auditorias,
     salas,
     bens,
-    salasPendentes,
-    salasConcluidas,
+    mapaSalas,
     isLoadingMapaSalas,
     refreshMapaSalas
   } = useDataProvider();
@@ -36,7 +35,14 @@ export default function Home() {
   return (
     <div className="p-4 w-full flex flex-col items-center justify-center gap-8 ">
 
-      <div className="stats border border-base-300 w-full max-w-4xl mt-4 md:mt-8">
+      <div className="breadcrumbs text-sm max-w-4xl w-full mt-2">
+        <ul>
+          <li><a href="/auditorias">Auditorias</a></li>
+          <li>Mapa</li>
+        </ul>
+      </div>
+
+      <div className="stats border border-base-300 w-full max-w-4xl">
         <div className="stat">
           <div className="stat-figure text-primary">
             <FilePenLineIcon size={32} />
@@ -44,7 +50,7 @@ export default function Home() {
           <div className="stat-title">Auditoria Selecionada</div>
           <div className="stat-value text-primary">{auditoriaAtiva?.titulo || "Carregando..."}</div>
           <div className="stat-desc">
-            {auditoriaAtiva?.dataInicio 
+            {auditoriaAtiva?.dataInicio
               ? `Iniciada em: ${new Date(auditoriaAtiva.dataInicio).toLocaleDateString('pt-BR')}`
               : "Buscando dados..."}
           </div>
@@ -64,9 +70,9 @@ export default function Home() {
             <span className="text-success ">
               {Math.round(((auditoriaAtiva?.itensAuditados?.length || 0) / (bens.length || 1)) * 100)} %
             </span>
-            <progress 
-              className="progress progress-accent w-full" 
-              value={((auditoriaAtiva?.itensAuditados?.length || 0) / (bens.length || 1)) * 100} 
+            <progress
+              className="progress progress-accent w-full"
+              value={((auditoriaAtiva?.itensAuditados?.length || 0) / (bens.length || 1)) * 100}
               max="100"
             ></progress>
           </div>
@@ -77,16 +83,16 @@ export default function Home() {
       </div>
 
 
-      <details className="collapse collapse-arrow bg-base-100 border border-base-300 max-w-4xl w-full" open>
+      <details className="collapse collapse-arrow bg-base-100 border border-base-300 max-w-4xl w-full" >
         <summary className="collapse-title font-semibold">
           <div className="badge badge-soft badge-warning mr-5">
             {isLoadingMapaSalas ? (
               <span className="loading loading-bars loading-xs"></span>
             ) : (
-              <span>{salasPendentes.length}</span>
+              <span>{mapaSalas.salasPendentes.length}</span>
             )}
           </div>
-          <span>Salas não Auditadas ({salasPendentes.length})</span>
+          <span>Salas não Auditadas ({mapaSalas.salasPendentes.length})</span>
         </summary>
 
         <div className="collapse-content text-sm">
@@ -94,14 +100,14 @@ export default function Home() {
             <div className="flex justify-center items-center py-8">
               <span className="loading loading-spinner loading-md text-warning"></span>
             </div>
-          ) : salasPendentes.length === 0 ? (
+          ) : mapaSalas.salasPendentes.length === 0 ? (
             <div className="py-8 text-center text-base-content/60 bg-base-200/50 rounded-box border border-dashed border-base-300">
               <p className="font-semibold text-success">🎉 Todas as salas foram 100% auditadas!</p>
               <p className="text-xs mt-1">Nenhuma sala com pendência restante nesta auditoria.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {salasPendentes.map((sala) => (
+              {mapaSalas.salasPendentes.map((sala) => (
                 <div key={sala.salaId} className={`card card-border flex flex-col`}>
                   <div className="card-body gap-4 flex flex-col flex-1">
 
@@ -120,7 +126,7 @@ export default function Home() {
 
                     <Link
                       href={`/auditorias/${id}/mapa/${sala.salaId}/leitor`}
-                      className="btn btn-ghost ">
+                      className="btn btn-soft btn-secondary ">
                       <BarcodeIcon size={18} />
                       Iniciar Coleta
                     </Link>
@@ -134,16 +140,16 @@ export default function Home() {
       </details>
 
 
-      <details className="collapse collapse-arrow bg-base-100 border border-base-300 max-w-4xl w-full" open>
+      <details className="collapse collapse-arrow bg-base-100 border border-base-300 max-w-4xl w-full" >
         <summary className="collapse-title font-semibold">
           <div className="badge badge-soft badge-success mr-5">
             {isLoadingMapaSalas ? (
               <span className="loading loading-bars loading-xs"></span>
             ) : (
-              <span>{salasConcluidas.length}</span>
+              <span>{mapaSalas.salasConcluidas.length}</span>
             )}
           </div>
-          <span>Salas 100% Auditadas ({salasConcluidas.length})</span>
+          <span>Salas 100% Auditadas ({mapaSalas.salasConcluidas.length})</span>
         </summary>
 
         <div className="collapse-content text-sm">
@@ -151,14 +157,14 @@ export default function Home() {
             <div className="flex justify-center items-center py-8">
               <span className="loading loading-spinner loading-md text-success"></span>
             </div>
-          ) : salasConcluidas.length === 0 ? (
+          ) : mapaSalas.salasConcluidas.length === 0 ? (
             <div className="py-8 text-center text-base-content/60 bg-base-200/50 rounded-box border border-dashed border-base-300">
               <p className="font-semibold">Nenhuma sala 100% auditada até o momento.</p>
               <p className="text-xs mt-1">Inicie a coleta de bens nas salas pendentes para acompanhar o avanço.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {salasConcluidas.map((sala) => (
+              {mapaSalas.salasConcluidas.map((sala) => (
                 <div key={sala.salaId} className={`card card-border flex flex-col`}>
                   <div className="card-body gap-4 flex flex-col flex-1">
 
@@ -175,10 +181,68 @@ export default function Home() {
                     <span className="text-lg font-semibold flex-1">{sala.salaDescricao}</span>
                     <progress className="progress progress-accent w-full" value={sala.progresso} max="100"></progress>
 
-                    <button className="btn btn-ghost ">
-                      <List size={18} />
-                      Ver Itens
-                    </button>
+                    <Link
+                      href={`/auditorias/${id}/mapa/${sala.salaId}/leitor`}
+                      className="btn btn-success btn-sm">
+                      Detalhes
+                      <ChevronRight size={14}/>
+                    </Link>
+
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </details>
+
+      <details className="collapse collapse-arrow bg-base-100 border border-base-300 max-w-4xl w-full" >
+        <summary className="collapse-title font-semibold">
+          <div className="badge badge-soft badge-ghost mr-5">
+            {isLoadingMapaSalas ? (
+              <span className="loading loading-bars loading-xs"></span>
+            ) : (
+              <span>{mapaSalas.salasVazias.length}</span>
+            )}
+          </div>
+          <span>Salas sem Bens ({mapaSalas.salasVazias.length})</span>
+        </summary>
+
+        <div className="collapse-content text-sm">
+          {isLoadingMapaSalas ? (
+            <div className="flex justify-center items-center py-8">
+              <span className="loading loading-spinner loading-md text-success"></span>
+            </div>
+          ) : mapaSalas.salasVazias.length === 0 ? (
+            <div className="py-8 text-center text-base-content/60 bg-base-200/50 rounded-box border border-dashed border-base-300">
+              <p className="font-semibold">Nenhuma sala 100% auditada até o momento.</p>
+              <p className="text-xs mt-1">Inicie a coleta de bens nas salas pendentes para acompanhar o avanço.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {mapaSalas.salasVazias.map((sala) => (
+                <div key={sala.salaId} className={`card card-border flex flex-col`}>
+                  <div className="card-body gap-4 flex flex-col flex-1">
+
+                    <div className="flex gap-2 items-center justify-between">
+                      <span className="badge badge-soft badge-secondary badge-sm">
+                        {sala.salaEscola}
+                      </span>
+
+                      <span className="text-xs font-light">
+                        ({sala.totalLidosOk}/{sala.totalBens})
+                      </span>
+                    </div>
+
+                    <span className="text-lg font-semibold flex-1">{sala.salaDescricao}</span>
+
+
+                    <Link
+                      href={`/auditorias/${id}/mapa/${sala.salaId}/leitor`}
+                      className="btn btn-ghost btn-sm">
+                      Detalhes
+                      <ChevronRight size={14} />
+                    </Link>
 
                   </div>
                 </div>

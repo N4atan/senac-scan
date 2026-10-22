@@ -6,7 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { ApiResponse } from "./logTransferenciasAction";
 import { AuditoriaAggregateArgs } from "@/app/generated/prisma/models";
-import { Auditoria, EnumEscolas, ItemAuditado, StatusEtiqueta, StatusLeitura } from "@/app/generated/prisma/client";
+import { Auditoria, EnumEscolas, ItemAuditado, Prisma, StatusEtiqueta, StatusLeitura } from "@/app/generated/prisma/client";
 import { BemComLocal, getAllBens } from "./bensActions";
 
 export type AuditoriaComBens = Auditoria & {
@@ -20,7 +20,13 @@ export type SalaMapeada = {
     totalBens: number;
     totalLidosOk: number;
     progresso: number;
-    statusSala: 'CONCLUIDA' | 'PENDENTE';
+    statusSala: 'CONCLUIDA' | 'PENDENTE' | 'VAZIA';
+}
+
+export type MapaSalas = {
+    salasPendentes: SalaMapeada[];
+    salasConcluidas: SalaMapeada[];
+    salasVazias: SalaMapeada[];
 }
 
 export type ListaParaLeitura = {
@@ -113,8 +119,43 @@ export async function getAllAuditorias() {
     }
 }
 
+export async function putAuditoria(auditoriaId: string, fields: Prisma.AuditoriaUpdateInput): Promise<ApiResponse<boolean | null>> {
+    try {
+        const auditoria = await prisma.auditoria.update({
+            where: {
+                id: auditoriaId
+            },
+            data: fields
+        })
 
-export async function getMapaSalas(auditoriaId: string): Promise<ApiResponse<{ salasPendentes: SalaMapeada[]; salasConcluidas: SalaMapeada[] }>> {
+        if (!auditoria) {
+            return {
+                data: null,
+                status: 500,
+                message: "Erro ao atualizar auditoria",
+            };
+        }
+
+        revalidatePath(`/auditoria/${auditoriaId}/mapa`);
+        revalidatePath("/auditoria");
+
+        return {
+            data: true,
+            status: 200,
+            message: "Auditoria atualizada com sucesso",
+        };
+
+    } catch (error) {
+        console.error("Erro ao atualizar auditoria:", error);
+        return {
+            data: null,
+            status: 500,
+            message: "Erro ao atualizar auditoria",
+        };
+    }
+}
+
+export async function getMapaSalas(auditoriaId: string): Promise<ApiResponse<MapaSalas>> {
     try {
 
         const salas = await prisma.sala.findMany({
@@ -132,28 +173,37 @@ export async function getMapaSalas(auditoriaId: string): Promise<ApiResponse<{ s
 
             const totalLidosOk = sala.itens_auditados.filter(item => item.status_leitura === StatusLeitura.OK).length;
 
-            const progresso = totalEsperado > 0
-                ? Math.round((totalLidosOk / totalEsperado) * 100)
-                : 100;
-
-            return {
+            const SalaMapeada: SalaMapeada = {
                 salaId: sala.id.toString(),
                 salaDescricao: sala.descricao,
                 salaEscola: sala.escola,
                 totalBens: totalEsperado,
                 totalLidosOk,
-                progresso,
-                statusSala: progresso === 100 ? "CONCLUIDA" : 'PENDENTE'
+                progresso: 0,
+                statusSala: 'VAZIA',
             }
+
+            if (totalEsperado === 0) {
+                return SalaMapeada;
+            }
+
+            const progresso = Math.round((totalLidosOk / totalEsperado) * 100);
+
+            SalaMapeada.progresso = progresso;
+            SalaMapeada.statusSala = progresso === 100 ? "CONCLUIDA" : 'PENDENTE';
+
+            return SalaMapeada;
         })
 
         const salasPendentes: SalaMapeada[] = mapa.filter(sala => sala.statusSala == 'PENDENTE');
         const salasConcluidas: SalaMapeada[] = mapa.filter(sala => sala.statusSala == 'CONCLUIDA');
+        const salasVazias: SalaMapeada[] = mapa.filter(sala => sala.statusSala == 'VAZIA');
 
         return {
             data: {
                 salasConcluidas: salasConcluidas,
-                salasPendentes: salasPendentes
+                salasPendentes: salasPendentes,
+                salasVazias: salasVazias
             },
             status: 200,
             message: "Mapa de salas buscado com sucesso"
@@ -165,7 +215,8 @@ export async function getMapaSalas(auditoriaId: string): Promise<ApiResponse<{ s
         return {
             data: {
                 salasConcluidas: [],
-                salasPendentes: []
+                salasPendentes: [],
+                salasVazias: [],
             },
             status: 500,
             message: "Erro ao buscar mapas de salas"
@@ -218,9 +269,9 @@ export async function getListaParaLeitura(salaId: string, auditoriaId: string): 
         const bensLeituraOk: BemComLocal[] = bensCadastradosNaSala.filter(bens => leiturasOk.some(item => item.bem_patrimonial_id === bens.id));
         const bensLeituraMovimentado: BemComLocal[] = bensCadastradosNaSala.filter(bens => leiturasMovimentado.some(item => item.bem_patrimonial_id === bens.id));
         const bensLeituraPendente: BemComLocal[] = bensCadastradosNaSala.filter(bens => !idsBensAuditados.has(bens.id));
-        
-        
-        
+
+
+
         return {
             data: {
                 bensLeituraOk,
