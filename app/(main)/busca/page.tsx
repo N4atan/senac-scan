@@ -5,8 +5,12 @@ import { EnumCategoriaBem } from "@/app/generated/prisma/enums";
 import { useDataProvider } from "@/Providers/DataProvider";
 import { Table } from "@/components/Tables/Table";
 import { mainImport } from "@/actions/importBensAction";
+import { useRouter } from "next/navigation";
+import BtnExportPDF from "@/components/Buttons/BtnExportPDF";
 
 export default function Home() {
+  const router = useRouter();
+
   const [showCategory, setShowCategory] = useState(false);
   const [showLocation, setShowLocation] = useState(false);
 
@@ -43,6 +47,7 @@ export default function Home() {
     }
     return lista;
   }, [bens, selectedLocation, selectedCategory, searchTerm, showLocation, showCategory]);
+
 
   return (
     <div className="p-4">
@@ -98,10 +103,7 @@ export default function Home() {
 
 
             <div className="flex flex-row gap-2 justify-between md:justify-start md:ml-auto ">
-              <button className="btn btn-ghost ">
-                <CloudDownload size={14} />
-                Exportar
-              </button>
+              <BtnExportPDF data={bensFiltrados} />
 
 
               <details className="dropdown dropdown-end">
